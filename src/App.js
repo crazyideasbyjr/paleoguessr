@@ -10166,19 +10166,15 @@ function WikiCard({ bestGuess, target, won }) {
             <p style={{ fontSize: 13, color: "#b09878", lineHeight: 1.6, margin: "0 0 14px" }}>
               {(() => {
                 const extract = wikiData.extract || "";
-                const sentences = extract.split(". ").filter(s => s.trim().length > 20);
-                // Find first sentence that reads as a proper description
-                // Skip sentences that start with pronunciation guides or are just fragments
-                const clean = sentences.find(s => {
-                  const t = s.trim().toLowerCase();
-                  return t.includes(" is ") || t.includes(" are ") || t.includes(" was ") || t.includes(" were ");
-                }) || sentences[0] || "";
-                // Clean up leading fragments before "is an" / "is a" / "was a"
-                const isIdx = clean.search(/\bis\b|\bare\b|\bwas\b|\bwere\b/);
-                const result = isIdx > 0 && isIdx < 60
-                  ? clean[0].toUpperCase() + clean.slice(1)
-                  : clean;
-                return result + ".";
+                const match = extract.match(/^([^.]+?)\s+(is|was|are|were)\s+/i);
+                if (match) {
+                  const name = extract.split(/[,(]/)[0].trim();
+                  const verb = match[2];
+                  const rest = extract.slice(match[0].length);
+                  const result = `${name} ${verb} ${rest}`;
+                  return result.split(". ").slice(0, 2).join(". ").replace(/\.+$/, "") + ".";
+                }
+                return extract.split(". ").slice(0, 2).join(". ").replace(/\.+$/, "") + ".";
               })()}
             </p>
             <a href={wikiUrl} target="_blank" rel="noopener noreferrer" style={{
