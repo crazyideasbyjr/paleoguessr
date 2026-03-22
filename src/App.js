@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 
 // ============================================================
 // SPECIES DATABASE
@@ -8727,10 +8727,12 @@ function getTaxonomyScore(guess, target) {
 }
 
 // Max possible score for a species pair
+// eslint-disable-next-line no-unused-vars
 function getMaxScore(species) {
   return species.lineage.length;
 }
 
+// eslint-disable-next-line no-unused-vars
 function getTaxonomyLabel(guess, target) {
   const shared = getDeepestShared(guess, target);
   if (!shared) return { label: "No shared group", color: "#b09878" };
@@ -9485,6 +9487,10 @@ export default function PaleoGame() {
 
         {/* Wikipedia card */}
         {(guesses.length > 0 || hintsUsed > 0) && (
+          <ClosestTimeSummary guesses={guesses} target={target} />
+        )}
+
+        {(guesses.length > 0 || hintsUsed > 0) && (
           <WikiCard bestGuess={bestGuess?.species} target={target} won={won || lost} />
         )}
 
@@ -9740,7 +9746,6 @@ function TaxonomyTree({ guesses, target, won, hintsUsed = 0, hintCeiling = 0 }) 
         {/* Edges */}
         {nodes.map(n => {
           if (!n.children || n.children.length === 0) return null;
-          const isLeaf = false;
           const px = xOf(n.depth) + nodeW;
           const py = n.y + nodeH / 2;
           return n.children.map(cid => {
