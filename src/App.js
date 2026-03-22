@@ -9712,10 +9712,6 @@ export default function PaleoGame() {
 
         {/* Wikipedia card */}
         {(guesses.length > 0 || hintsUsed > 0) && (
-          <ClosestTimeSummary guesses={guesses} target={target} />
-        )}
-
-        {(guesses.length > 0 || hintsUsed > 0) && (
           <WikiCard bestGuess={bestGuess?.species} target={target} won={won || lost} />
         )}
 
@@ -10167,7 +10163,15 @@ function WikiCard({ bestGuess, target, won }) {
               {wikiData.title}
             </div>
             <p style={{ fontSize: 13, color: "#b09878", lineHeight: 1.6, margin: "0 0 14px" }}>
-              {wikiData.extract?.split(". ").slice(0, 2).join(". ") + "."}
+              {wikiData.extract
+                ?.split(". ")
+                .filter(s => s.trim().length > 20)
+                .slice(0, 2)
+                .join(". ")
+                .replace(/,\s*,/g, ",")
+                .replace(/\s*,\s*is\s/g, " is ")
+                .trim() + "."
+              }
             </p>
             <a href={wikiUrl} target="_blank" rel="noopener noreferrer" style={{
               fontSize: 12, color: titleColor,
