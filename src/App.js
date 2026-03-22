@@ -8940,6 +8940,7 @@ export default function PaleoGame() {
     if (!practiceMode) {
       saveState(puzzleNumber, guesses, won, lost, hintsUsed, hintCeiling);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [guesses, won, lost, hintsUsed, hintCeiling, practiceMode, puzzleNumber]);
 
   const MAX_GUESSES = 20;
