@@ -8838,22 +8838,75 @@ function getPracticeSpecies() {
 }
 
 export default function PaleoGame() {
+  // ── localStorage helpers ──────────────────────────────────────────
+  // Key includes puzzle number so saved state auto-invalidates each day
+  function getSaveKey(num) { return `paleoguessr_v1_puzzle_${num}`; }
+
+  function loadSavedState(num) {
+    try {
+      const raw = localStorage.getItem(getSaveKey(num));
+      if (!raw) return null;
+      const saved = JSON.parse(raw);
+      // Re-hydrate guess species references from SPECIES_DB
+      const hydratedGuesses = (saved.guesses || []).map(g => {
+        const species = SPECIES_DB.find(s => s.id === g.speciesId);
+        if (!species) return null;
+        return { ...g, species };
+      }).filter(Boolean);
+      return { ...saved, guesses: hydratedGuesses };
+    } catch { return null; }
+  }
+
+  function saveState(num, guesses, won, lost, hintsUsed, hintCeiling) {
+    try {
+      const serialised = {
+        guesses: guesses.map(g => ({ ...g, species: undefined, speciesId: g.species.id })),
+        won, lost, hintsUsed, hintCeiling,
+      };
+      localStorage.setItem(getSaveKey(num), JSON.stringify(serialised));
+    } catch { /* storage unavailable — silently skip */ }
+  }
+  // ─────────────────────────────────────────────────────────────────
+
   // puzzleNumber and dailyTarget are stored in state together so they always
   // stay in sync and can be updated atomically when the day rolls over
   const [puzzleNumber, setPuzzleNumber] = useState(() => getDailyPuzzleNumber());
   const [dailyTarget, setDailyTarget] = useState(() => getDailySpecies());
   const [input, setInput] = useState("");
-  const [guesses, setGuesses] = useState([]);
-  const [won, setWon] = useState(false);
-  const [lost, setLost] = useState(false);
-  const [hintsUsed, setHintsUsed] = useState(0);
-  const [hintCeiling, setHintCeiling] = useState(0);
+
+  // Initialise daily state from localStorage if available
+  const [guesses, setGuesses] = useState(() => {
+    const saved = loadSavedState(getDailyPuzzleNumber());
+    return saved ? saved.guesses : [];
+  });
+  const [won, setWon] = useState(() => {
+    const saved = loadSavedState(getDailyPuzzleNumber());
+    return saved ? saved.won : false;
+  });
+  const [lost, setLost] = useState(() => {
+    const saved = loadSavedState(getDailyPuzzleNumber());
+    return saved ? saved.lost : false;
+  });
+  const [hintsUsed, setHintsUsed] = useState(() => {
+    const saved = loadSavedState(getDailyPuzzleNumber());
+    return saved ? saved.hintsUsed : 0;
+  });
+  const [hintCeiling, setHintCeiling] = useState(() => {
+    const saved = loadSavedState(getDailyPuzzleNumber());
+    return saved ? saved.hintCeiling : 0;
+  });
+
   const [suggestions, setSuggestions] = useState([]);
   const [showSpeciesList, setShowSpeciesList] = useState(false);
   const [copied, setCopied] = useState(false);
   const [practiceMode, setPracticeMode] = useState(false);
   const [practiceTarget, setPracticeTarget] = useState(null);
   const [dailySnapshot, setDailySnapshot] = useState(null);
+  // Show "already played" banner when returning to a completed daily puzzle
+  const [showAlreadyPlayed, setShowAlreadyPlayed] = useState(() => {
+    const saved = loadSavedState(getDailyPuzzleNumber());
+    return saved ? (saved.won || saved.lost) : false;
+  });
 
   // Check every 30 seconds whether the day has rolled over.
   // When it has, update the puzzle and reset daily game state.
@@ -8872,6 +8925,7 @@ export default function PaleoGame() {
           setInput("");
           setSuggestions([]);
           setDailySnapshot(null);
+          setShowAlreadyPlayed(false);
           return newNum;
         }
         return prev;
@@ -8880,6 +8934,14 @@ export default function PaleoGame() {
     const id = setInterval(tick, 30000);
     return () => clearInterval(id);
   }, []);
+
+  // Save daily state to localStorage whenever it changes (not in practice mode)
+  useEffect(() => {
+    if (!practiceMode) {
+      saveState(puzzleNumber, guesses, won, lost, hintsUsed, hintCeiling);
+    }
+  }, [guesses, won, lost, hintsUsed, hintCeiling, practiceMode, puzzleNumber]);
+
   const MAX_GUESSES = 20;
   const HINT_COST = 3;
   const guessCount = guesses.length + hintsUsed * HINT_COST;
@@ -9298,8 +9360,44 @@ export default function PaleoGame() {
           </div>
         )}
 
+        {/* Already played banner */}
+        {showAlreadyPlayed && !practiceMode && (
+          <div style={{
+            marginTop: 20,
+            padding: "16px 20px",
+            background: "rgba(74,222,128,0.08)",
+            border: "1px solid rgba(74,222,128,0.3)",
+            borderRadius: 12,
+            textAlign: "center",
+          }}>
+            <div style={{ fontSize: 20, marginBottom: 6 }}>🦕</div>
+            <div style={{ fontSize: 15, fontWeight: "bold", color: "#4ade80", marginBottom: 4 }}>
+              You already played today!
+            </div>
+            <div style={{ fontSize: 13, color: "#b09878", marginBottom: 14 }}>
+              Puzzle #{puzzleNumber} is done — come back tomorrow for a new one.
+            </div>
+            <button
+              onClick={() => { setShowAlreadyPlayed(false); enterPractice(); }}
+              style={{
+                background: "#4ade80",
+                border: "none",
+                borderRadius: 20,
+                color: "#1a1a1a",
+                fontSize: 13,
+                fontWeight: "bold",
+                padding: "8px 20px",
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              Play Practice Mode
+            </button>
+          </div>
+        )}
+
         {/* Search */}
-        {!won && !lost && (
+        {!won && !lost && !showAlreadyPlayed && (
           <div style={{ marginTop: 24, position: "relative" }}>
             <div style={{ position: "relative" }}>
               <input
