@@ -8837,6 +8837,113 @@ function getPracticeSpecies() {
   return SPECIES_DB[idx];
 }
 
+function puzzleDate(num) {
+  const LAUNCH_MS = Date.UTC(2026, 2, 5, 2, 0, 0);
+  const d = new Date(LAUNCH_MS + (num - 1) * 86400000);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function HistoryModal({ onClose, history, buildShareTextFromSaved }) {
+  const [copiedNum, setCopiedNum] = useState(null);
+
+  function copyHistoryEntry(num, saved) {
+    const text = buildShareTextFromSaved(num, saved);
+    const finish = () => { setCopiedNum(num); setTimeout(() => setCopiedNum(null), 2500); };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(finish).catch(() => {
+          try {
+            const ta = document.createElement("textarea");
+            ta.value = text; ta.style.cssText = "position:fixed;opacity:0";
+            document.body.appendChild(ta); ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+            finish();
+          } catch(e) { finish(); }
+        });
+      } else { finish(); }
+    } catch(e) { finish(); }
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
+        zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 20,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: "#2c1f0e", border: "1px solid rgba(180,120,40,0.4)",
+          borderRadius: 16, padding: 24, width: "100%", maxWidth: 420,
+          maxHeight: "80vh", overflowY: "auto",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div style={{ fontSize: 16, fontWeight: "bold", color: "#d4a843", letterSpacing: 2, textTransform: "uppercase" }}>
+            My History
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: "none", border: "none", color: "#b09878", fontSize: 20, cursor: "pointer", fontFamily: "inherit" }}
+          >✕</button>
+        </div>
+        {history.length === 0 ? (
+          <div style={{ color: "#b09878", fontSize: 14, textAlign: "center", padding: "20px 0" }}>
+            No completed puzzles in the last 7 days yet.<br/>
+            <span style={{ fontSize: 12, opacity: 0.7 }}>History saves on this device as you play.</span>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {history.map(({ num, saved }) => {
+              const totalGuesses = saved.guesses.length + (saved.hintsUsed || 0) * 3;
+              const MAX = 20;
+              const scoreStr = saved.won ? `${totalGuesses}/${MAX}` : `X/${MAX}`;
+              const squares = [...saved.guesses].reverse().map(g => g.emoji || "🟥");
+              const hintSquares = Array(saved.hintsUsed || 0).fill("⬜");
+              const grid = [...squares, ...hintSquares].join("");
+              return (
+                <div key={num} style={{
+                  background: "rgba(90,55,15,0.4)",
+                  border: `1px solid ${saved.won ? "rgba(74,222,128,0.3)" : "rgba(248,113,113,0.3)"}`,
+                  borderRadius: 10, padding: "12px 16px",
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: "bold", color: saved.won ? "#4ade80" : "#f87171" }}>
+                        {saved.won ? "✅" : "❌"} Puzzle #{num}
+                        <span style={{ fontSize: 11, color: "#9a7d5a", marginLeft: 8 }}>{puzzleDate(num)}</span>
+                      </div>
+                      <div style={{ fontSize: 12, color: "#b09878", marginTop: 2 }}>
+                        {scoreStr}{saved.hintsUsed > 0 ? ` · ${saved.hintsUsed} hint${saved.hintsUsed > 1 ? "s" : ""}` : ""}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => copyHistoryEntry(num, saved)}
+                      style={{
+                        background: copiedNum === num ? "rgba(74,222,128,0.2)" : "rgba(140,90,20,0.4)",
+                        border: `1px solid ${copiedNum === num ? "rgba(74,222,128,0.5)" : "rgba(180,120,40,0.4)"}`,
+                        borderRadius: 12, color: copiedNum === num ? "#4ade80" : "#d4a843",
+                        fontSize: 11, padding: "4px 12px", cursor: "pointer", fontFamily: "inherit",
+                      }}
+                    >
+                      {copiedNum === num ? "✅ Copied!" : "📋 Copy"}
+                    </button>
+                  </div>
+                  <div style={{ fontSize: 16, letterSpacing: 1 }}>{grid}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function PaleoGame() {
   // ── localStorage helpers ──────────────────────────────────────────
   // Key includes puzzle number so saved state auto-invalidates each day
@@ -9617,112 +9724,15 @@ export default function PaleoGame() {
       </div>{/* end relative zIndex wrapper */}
 
       {/* History Modal */}
-      {showHistory && (() => {
-        const history = getHistory();
-        const [copiedNum, setCopiedNum] = React.useState(null);
-        function copyHistoryEntry(num, saved) {
-          const text = buildShareTextFromSaved(num, saved);
-          const finish = () => { setCopiedNum(num); setTimeout(() => setCopiedNum(null), 2500); };
-          try {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-              navigator.clipboard.writeText(text).then(finish).catch(() => {
-                try {
-                  const ta = document.createElement("textarea");
-                  ta.value = text; ta.style.cssText = "position:fixed;opacity:0";
-                  document.body.appendChild(ta); ta.select();
-                  document.execCommand("copy");
-                  document.body.removeChild(ta);
-                  finish();
-                } catch(e) { finish(); }
-              });
-            } else { finish(); }
-          } catch(e) { finish(); }
-        }
-        function puzzleDate(num) {
-          const LAUNCH_MS = Date.UTC(2026, 2, 5, 2, 0, 0);
-          const d = new Date(LAUNCH_MS + (num - 1) * 86400000);
-          return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-        }
-        return (
-          <div
-            onClick={() => setShowHistory(false)}
-            style={{
-              position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
-              zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center",
-              padding: 20,
-            }}
-          >
-            <div
-              onClick={e => e.stopPropagation()}
-              style={{
-                background: "#2c1f0e", border: "1px solid rgba(180,120,40,0.4)",
-                borderRadius: 16, padding: 24, width: "100%", maxWidth: 420,
-                maxHeight: "80vh", overflowY: "auto",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                <div style={{ fontSize: 16, fontWeight: "bold", color: "#d4a843", letterSpacing: 2, textTransform: "uppercase" }}>
-                  My History
-                </div>
-                <button
-                  onClick={() => setShowHistory(false)}
-                  style={{ background: "none", border: "none", color: "#b09878", fontSize: 20, cursor: "pointer", fontFamily: "inherit" }}
-                >✕</button>
-              </div>
-              {history.length === 0 ? (
-                <div style={{ color: "#b09878", fontSize: 14, textAlign: "center", padding: "20px 0" }}>
-                  No completed puzzles in the last 7 days yet.<br/>
-                  <span style={{ fontSize: 12, opacity: 0.7 }}>History saves on this device as you play.</span>
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {history.map(({ num, saved }) => {
-                    const totalGuesses = saved.guesses.length + saved.hintsUsed * 3;
-                    const MAX = 20;
-                    const scoreStr = saved.won ? `${totalGuesses}/${MAX}` : `X/${MAX}`;
-                    const squares = [...saved.guesses].reverse().map(g => g.emoji || "🟥");
-                    const hintSquares = Array(saved.hintsUsed || 0).fill("⬜");
-                    const grid = [...squares, ...hintSquares].join("");
-                    return (
-                      <div key={num} style={{
-                        background: "rgba(90,55,15,0.4)",
-                        border: `1px solid ${saved.won ? "rgba(74,222,128,0.3)" : "rgba(248,113,113,0.3)"}`,
-                        borderRadius: 10, padding: "12px 16px",
-                      }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: "bold", color: saved.won ? "#4ade80" : "#f87171" }}>
-                              {saved.won ? "✅" : "❌"} Puzzle #{num}
-                              <span style={{ fontSize: 11, color: "#9a7d5a", marginLeft: 8 }}>{puzzleDate(num)}</span>
-                            </div>
-                            <div style={{ fontSize: 12, color: "#b09878", marginTop: 2 }}>
-                              {scoreStr}{saved.hintsUsed > 0 ? ` · ${saved.hintsUsed} hint${saved.hintsUsed > 1 ? "s" : ""}` : ""}
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => copyHistoryEntry(num, saved)}
-                            style={{
-                              background: copiedNum === num ? "rgba(74,222,128,0.2)" : "rgba(140,90,20,0.4)",
-                              border: `1px solid ${copiedNum === num ? "rgba(74,222,128,0.5)" : "rgba(180,120,40,0.4)"}`,
-                              borderRadius: 12, color: copiedNum === num ? "#4ade80" : "#d4a843",
-                              fontSize: 11, padding: "4px 12px", cursor: "pointer", fontFamily: "inherit",
-                            }}
-                          >
-                            {copiedNum === num ? "✅ Copied!" : "📋 Copy"}
-                          </button>
-                        </div>
-                        <div style={{ fontSize: 16, letterSpacing: 1 }}>{grid}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })()}
+      {showHistory && (
+        <HistoryModal
+          onClose={() => setShowHistory(false)}
+          history={getHistory()}
+          buildShareTextFromSaved={buildShareTextFromSaved}
+        />
+      )}
 
-      {/* Species List Modal */}
+      {/* Species List Modal */}}
       {showSpeciesList && (
         <div
           onClick={() => setShowSpeciesList(false)}
