@@ -10144,6 +10144,20 @@ function WikiCard({ bestGuess, target, won }) {
         )}
         {!loading && wikiData && (
           <div style={{ padding: "16px 18px" }}>
+            {wikiData.thumbnail?.source && (
+              <img
+                src={wikiData.thumbnail.source}
+                alt={wikiData.title}
+                style={{
+                  width: "100%",
+                  maxHeight: 200,
+                  objectFit: "cover",
+                  borderRadius: 8,
+                  marginBottom: 12,
+                  display: "block",
+                }}
+              />
+            )}
             <div style={{ fontSize: 11, color: "#9a7d5a", textTransform: "uppercase", letterSpacing: 2, marginBottom: 2 }}>
               {won ? "Species" : shared?.rank}
             </div>
