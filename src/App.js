@@ -10150,8 +10150,10 @@ function WikiCard({ bestGuess, target, won }) {
                 alt={wikiData.title}
                 style={{
                   width: "100%",
-                  maxHeight: 200,
-                  objectFit: "cover",
+                  maxHeight: 300,
+                  minHeight: 120,
+                  objectFit: "contain",
+                  background: "rgba(0,0,0,0.2)",
                   borderRadius: 8,
                   marginBottom: 12,
                   display: "block",
