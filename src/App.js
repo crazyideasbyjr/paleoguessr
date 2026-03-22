@@ -10043,6 +10043,7 @@ function TaxonomyTree({ guesses, target, won, hintsUsed = 0, hintCeiling = 0 }) 
 // ============================================================
 // CLOSEST TIME SUMMARY (Globle-style)
 // ============================================================
+// eslint-disable-next-line no-unused-vars
 function ClosestTimeSummary({ guesses, target }) {
   const closest = [...guesses].sort((a, b) => a.timeDiff - b.timeDiff)[0];
   if (!closest) return null;
