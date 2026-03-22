@@ -9699,6 +9699,24 @@ export default function PaleoGame() {
 
       </div>
 
+      {/* Footer credit */}
+      <div style={{
+        textAlign: "center",
+        padding: "20px 20px 32px",
+        fontSize: 11,
+        color: "#5a4020",
+      }}>
+        <a
+          href="https://www.flaticon.com/free-icons/dinosaur"
+          title="dinosaur icons"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "#5a4020", textDecoration: "none" }}
+        >
+          Dinosaur icons created by Freepik — Flaticon
+        </a>
+      </div>
+
       </div>{/* end relative zIndex wrapper */}
 
       {/* History Modal */}
