@@ -8726,25 +8726,7 @@ function getTaxonomyScore(guess, target) {
   return guess.lineage.findIndex(n => n.value === shared.value && n.rank === shared.rank) + 1;
 }
 
-// Max possible score for a species pair
-// eslint-disable-next-line no-unused-vars
-function getMaxScore(species) {
-  return species.lineage.length;
-}
 
-// eslint-disable-next-line no-unused-vars
-function getTaxonomyLabel(guess, target) {
-  const shared = getDeepestShared(guess, target);
-  if (!shared) return { label: "No shared group", color: "#b09878" };
-  const depth = guess.lineage.findIndex(n => n.value === shared.value);
-  const maxDepth = Math.max(guess.lineage.length, target.lineage.length);
-  const pct = depth / maxDepth;
-  if (pct > 0.85) return { label: `Same ${shared.rank}: ${shared.value}`, color: "#4ade80" };
-  if (pct > 0.65) return { label: `Same ${shared.rank}: ${shared.value}`, color: "#86efac" };
-  if (pct > 0.45) return { label: `Same ${shared.rank}: ${shared.value}`, color: "#fbbf24" };
-  if (pct > 0.25) return { label: `Same ${shared.rank}: ${shared.value}`, color: "#fb923c" };
-  return { label: `Same ${shared.rank}: ${shared.value}`, color: "#f87171" };
-}
 
 // Returns true if the two species' time ranges overlap at all
 function rangesOverlap(a, b) {
@@ -10041,54 +10023,6 @@ function TaxonomyTree({ guesses, target, won, hintsUsed = 0, hintCeiling = 0 }) 
 }
 
 // ============================================================
-// CLOSEST TIME SUMMARY (Globle-style)
-// ============================================================
-// eslint-disable-next-line no-unused-vars
-function ClosestTimeSummary({ guesses, target }) {
-  const closest = [...guesses].sort((a, b) => a.timeDiff - b.timeDiff)[0];
-  if (!closest) return null;
-  const diff = closest.timeDiff;
-  const overlaps = rangesOverlap(closest.species, target);
-  const arrow = getTimeArrow(closest.species, target);
-
-  let heat, label;
-  if (overlaps)          { heat = "#4ade80"; label = "Overlapping time ranges!"; }
-  else if (diff < 0.001) { heat = "#4ade80"; label = "Extremely close in time!"; }
-  else if (diff < 15)    { heat = "#86efac"; label = "Very close in time"; }
-  else if (diff < 50)    { heat = "#fbbf24"; label = "Somewhat close"; }
-  else if (diff < 150)   { heat = "#fb923c"; label = "Far apart in time"; }
-  else                   { heat = "#f87171"; label = "Very far apart in time"; }
-
-  return (
-    <div style={{
-      marginTop: 20,
-      padding: "14px 18px",
-      background: `${heat}12`,
-      border: `1px solid ${heat}44`,
-      borderRadius: 10,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      flexWrap: "wrap",
-      gap: 8
-    }}>
-      <div>
-        <div style={{ fontSize: 11, color: "#9a7d5a", textTransform: "uppercase", letterSpacing: 2, marginBottom: 2 }}>
-          Best Time Match
-        </div>
-        <div style={{ fontSize: 14, fontWeight: "bold", color: "#f0e6d0" }}>
-          {closest.species.name}
-        </div>
-      </div>
-      <div style={{ textAlign: "right" }}>
-        <div style={{ fontSize: 18, fontWeight: "bold", color: heat }}>
-          {overlaps ? "Overlap!" : formatMa(diff)}
-        </div>
-        <div style={{ fontSize: 11, color: heat + "cc" }}>{label} • {arrow}</div>
-      </div>
-    </div>
-  );
-}
 
 // ============================================================
 // WIKIPEDIA CARD — live fetch of summary + image
