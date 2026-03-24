@@ -4843,7 +4843,7 @@ const SPECIES_DB = [
   {
     id: 235, name: "Macrogryphosaurus",
     periodName: "Late Cretaceous", periodStart: 90, periodEnd: 85,
-    wikiSlug: "Macrogryphosaurus",
+    wikiSlug: "Macrogryphosaurus_gondwanicus",
     lineage: [
       { rank: "Kingdom",   value: "Animalia" },
       { rank: "Phylum",    value: "Chordata" },
@@ -8988,6 +8988,7 @@ export default function PaleoGame() {
   const [suggestions, setSuggestions] = useState([]);
   const [showSpeciesList, setShowSpeciesList] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [selectedNode, setSelectedNode] = useState(null);
   const [copied, setCopied] = useState(false);
   const [practiceMode, setPracticeMode] = useState(false);
   const [practiceTarget, setPracticeTarget] = useState(null);
@@ -9176,6 +9177,7 @@ export default function PaleoGame() {
     const newGuess = { species, taxScore, timeDiff, correct, emoji };
     const newGuesses = [newGuess, ...guesses];
     setGuesses(newGuesses);
+    setSelectedNode(null);
     if (correct) {
       setWon(true);
     } else {
@@ -9687,14 +9689,27 @@ export default function PaleoGame() {
             <div style={{ fontSize: 12, letterSpacing: 3, color: "#b47828", marginBottom: 14, textTransform: "uppercase" }}>
               Cladogram
             </div>
-            <TaxonomyTree guesses={guesses} target={target} won={won} hintsUsed={hintsUsed} hintCeiling={hintCeiling} />
+            <TaxonomyTree guesses={guesses} target={target} won={won} hintsUsed={hintsUsed} hintCeiling={hintCeiling} onNodeClick={node => {
+              if (node.value === "???") return;
+              setSelectedNode(n => n?.value === node.value ? null : node);
+            }} />
+            {selectedNode && (
+              <div style={{ fontSize: 11, color: "#7a6040", marginTop: 6, textAlign: "center" }}>
+                Showing Wikipedia for <strong style={{ color: "#d4a843" }}>{selectedNode.value}</strong> — click again to dismiss
+              </div>
+            )}
           </div>
         )}
 
-
         {/* Wikipedia card */}
         {(guesses.length > 0 || hintsUsed > 0) && (
-          <WikiCard bestGuess={bestGuess?.species} target={target} won={won || lost} />
+          <WikiCard
+            bestGuess={selectedNode ? null : bestGuess?.species}
+            target={target}
+            won={selectedNode ? false : (won || lost)}
+            overrideSlug={selectedNode ? selectedNode.value : null}
+            overrideLabel={selectedNode ? selectedNode.rank : null}
+          />
         )}
 
       </div>
@@ -9907,7 +9922,7 @@ function layoutTree(node) {
   return { nodes, maxDepth, totalHeight: Math.max(leaves.length * leafSpacing, 60) };
 }
 
-function TaxonomyTree({ guesses, target, won, hintsUsed = 0, hintCeiling = 0 }) {
+function TaxonomyTree({ guesses, target, won, hintsUsed = 0, hintCeiling = 0, onNodeClick }) {
   const guessedSpecies = guesses.map(g => g.species);
 
   // How many lineage levels are already revealed by the best guess?
@@ -10005,10 +10020,10 @@ function TaxonomyTree({ guesses, target, won, hintsUsed = 0, hintCeiling = 0 }) 
           const x = xOf(n.depth);
           const y = n.y;
           const displayValue = n.value.replace(/\s*\([^)]*\)/, "");
-          const label = displayValue.length > 13 ? displayValue.slice(0, 12) + "…" : displayValue;
+          const label = displayValue.length > 19 ? displayValue.slice(0, 18) + "…" : displayValue;
 
           return (
-            <g key={`node-${n.id}`}>
+            <g key={`node-${n.id}`} style={{ cursor: isMystery ? "default" : "pointer" }} onClick={() => onNodeClick && !isMystery && onNodeClick(n)}>
               <rect
                 x={x} y={y} width={w} height={nodeH}
                 rx={isLeaf ? 6 : 12}
@@ -10045,20 +10060,22 @@ function TaxonomyTree({ guesses, target, won, hintsUsed = 0, hintCeiling = 0 }) 
 // ============================================================
 // WIKIPEDIA CARD — live fetch of summary + image
 // ============================================================
-function WikiCard({ bestGuess, target, won }) {
+function WikiCard({ bestGuess, target, won, overrideSlug, overrideLabel }) {
   const [wikiData, setWikiData] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const shared = won
-    ? { rank: "Species", value: target.wikiSlug, display: target.name }
-    : bestGuess
-      ? (() => {
-          const s = getSharedGroupWiki(bestGuess, target);
-          return s ? { rank: s.rank, value: s.value, display: s.value } : null;
-        })()
-      : null;
+  const shared = overrideSlug
+    ? { rank: overrideLabel || "Clade", value: overrideSlug, display: overrideSlug }
+    : won
+      ? { rank: "Species", value: target.wikiSlug, display: target.name }
+      : bestGuess
+        ? (() => {
+            const s = getSharedGroupWiki(bestGuess, target);
+            return s ? { rank: s.rank, value: s.value, display: s.value } : null;
+          })()
+        : null;
 
-  const wikiTitle = won ? target.wikiSlug : shared?.value;
+  const wikiTitle = overrideSlug ? overrideSlug : (won ? target.wikiSlug : shared?.value);
 
   useEffect(() => {
     if (!wikiTitle) return;
@@ -10070,17 +10087,17 @@ function WikiCard({ bestGuess, target, won }) {
       .catch(() => setLoading(false));
   }, [wikiTitle]);
 
-  if (!shared && !won) return null;
-  if (!bestGuess && !won) return null;
+  if (!shared && !won && !overrideSlug) return null;
+  if (!bestGuess && !won && !overrideSlug) return null;
 
   const wikiUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(wikiTitle)}`;
-  const borderColor = won ? "rgba(74,222,128,0.4)" : "rgba(140,90,20,0.55)";
-  const titleColor = won ? "#4ade80" : "#d4a843";
+  const borderColor = overrideSlug ? "rgba(180,120,40,0.55)" : won ? "rgba(74,222,128,0.4)" : "rgba(140,90,20,0.55)";
+  const titleColor = overrideSlug ? "#d4a843" : won ? "#4ade80" : "#d4a843";
 
   return (
     <div style={{ marginTop: 28 }}>
       <div style={{ fontSize: 12, letterSpacing: 3, color: "#b47828", marginBottom: 12, textTransform: "uppercase" }}>
-        {won ? "🏆 Mystery Species" : "📖 Closest Shared Group"}
+        {overrideSlug ? "🔍 Cladogram Node" : won ? "🏆 Mystery Species" : "📖 Closest Shared Group"}
       </div>
       <div style={{
         background: won ? "rgba(74,222,128,0.06)" : "rgba(90,55,15,0.4)",
@@ -10110,7 +10127,7 @@ function WikiCard({ bestGuess, target, won }) {
               />
             )}
             <div style={{ fontSize: 11, color: "#9a7d5a", textTransform: "uppercase", letterSpacing: 2, marginBottom: 2 }}>
-              {won ? "Species" : shared?.rank}
+              {overrideSlug ? (overrideLabel || "Clade") : won ? "Species" : shared?.rank}
             </div>
             <div style={{ fontSize: 18, fontWeight: "bold", color: titleColor, marginBottom: 8 }}>
               {wikiData.title}
@@ -10143,7 +10160,7 @@ function WikiCard({ bestGuess, target, won }) {
         {!loading && !wikiData && (
           <div style={{ padding: "16px 18px" }}>
             <div style={{ fontSize: 11, color: "#9a7d5a", textTransform: "uppercase", letterSpacing: 2, marginBottom: 2 }}>
-              {won ? "Species" : shared?.rank}
+              {overrideSlug ? (overrideLabel || "Clade") : won ? "Species" : shared?.rank}
             </div>
             <div style={{ fontSize: 18, fontWeight: "bold", color: titleColor, marginBottom: 10 }}>
               {shared?.display || target.name}
