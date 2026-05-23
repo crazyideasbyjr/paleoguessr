@@ -11298,6 +11298,182 @@ function puzzleDate(num) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+
+function getGroup(vals) {
+  if (vals.includes('Aves')) return ["🦅", "Bird"];
+  if (vals.includes('Dinosauria')) {
+    if (vals.includes('Theropoda')) return ["🦖", "Theropod Dinosaur"];
+    if (vals.includes('Sauropoda')) return ["🦕", "Sauropod Dinosaur"];
+    if (vals.includes('Thyreophora')) return ["🛡️", "Armoured Dinosaur"];
+    if (vals.includes('Ceratopsia')) return ["🦏", "Horned Dinosaur"];
+    if (vals.includes('Pachycephalosauria')) return ["💀", "Dome-headed Dinosaur"];
+    if (vals.includes('Ornithopoda')) return ["🦕", "Ornithopod Dinosaur"];
+    if (vals.includes('Ornithischia')) return ["🦕", "Ornithischian Dinosaur"];
+    return ["🦕", "Dinosaur"];
+  }
+  if (vals.includes('Pterosauria')) return ["🪶", "Pterosaur"];
+  if (vals.includes('Mammalia') || vals.includes('Synapsida')) {
+    if (vals.includes('Primates')) return ["🐒", "Primate"];
+    if (vals.includes('Feliformia')) return ["🐱", "Feline / Hyaena"];
+    if (vals.includes('Caniformia')) return ["🐺", "Canine / Bear / Seal"];
+    if (vals.includes('Carnivora')) return ["🦁", "Carnivore"];
+    if (vals.includes('Cetacea')) return ["🐋", "Whale / Dolphin"];
+    if (vals.includes('Proboscidea')) return ["🐘", "Proboscidean"];
+    if (vals.includes('Perissodactyla')) return ["🦏", "Odd-toed Ungulate"];
+    if (vals.includes('Artiodactyla')) return ["🦌", "Even-toed Ungulate"];
+    if (vals.includes('Rodentia')) return ["🐭", "Rodent"];
+    if (vals.includes('Chiroptera')) return ["🦇", "Bat"];
+    if (vals.includes('Metatheria')) return ["🦘", "Marsupial"];
+    if (vals.includes('Mammalia')) return ["🦶", "Mammal"];
+    return ["🦴", "Synapsid"];
+  }
+  if (vals.includes('Crocodylomorpha') || vals.includes('Crocodilia')) return ["🐊", "Crocodylomorph"];
+  if (vals.includes('Pseudosuchia')) return ["🐊", "Archosaur (Croc Line)"];
+  if (vals.includes('Testudines')) return ["🐢", "Turtle / Tortoise"];
+  if (vals.includes('Mosasauria')) return ["🦎", "Mosasaur"];
+  if (vals.includes('Serpentes')) return ["🐍", "Snake"];
+  if (vals.includes('Squamata')) return ["🦎", "Lizard"];
+  if (vals.includes('Ichthyosauria')) return ["🐬", "Ichthyosaur"];
+  if (vals.includes('Plesiosauria') || vals.includes('Sauropterygia')) return ["🌊", "Plesiosaur"];
+  if (vals.includes('Nothosauria')) return ["🌊", "Nothosaur"];
+  if (vals.includes('Archosauromorpha')) return ["🦎", "Archosauromorph"];
+  if (vals.includes('Amphibia')) return ["🐸", "Amphibian"];
+  if (vals.includes('Chondrichthyes')) return ["🦈", "Shark / Cartilaginous Fish"];
+  if (vals.includes('Actinopterygii')) return ["🐟", "Ray-finned Fish"];
+  if (vals.includes('Sarcopterygii')) return ["🐟", "Lobe-finned Fish"];
+  if (vals.includes('Placodermi')) return ["🐟", "Placoderm Fish"];
+  if (vals.includes('Osteostraci') || vals.includes('Astraspida') || vals.includes('Myllokunmingiida') || vals.includes('Petromyzontida')) return ["🐟", "Early Fish"];
+  if (vals.includes('Insecta')) return ["🦋", "Insect"];
+  if (vals.includes('Merostomata')) return ["🦂", "Sea Scorpion"];
+  if (vals.includes('Arthropoda')) return ["🦀", "Arthropod"];
+  if (vals.includes('Mollusca')) return ["🐙", "Mollusc"];
+  if (vals.includes('Halwaxiida')) return ["🐌", "Early Animal"];
+  if (vals.includes('Eumetazoa')) return ["🌿", "Ediacaran"];
+  return ["🦴", "Other"];
+}
+
+function SpeciesListModal({ onClose }) {
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("group");
+
+  const enriched = SPECIES_DB.map(s => {
+    const vals = s.lineage.map(n => n.value);
+    const [emoji, group] = getGroup(vals);
+    return { ...s, emoji, group };
+  });
+
+  const filtered = enriched.filter(s =>
+    s.name.toLowerCase().includes(search.toLowerCase()) ||
+    s.group.toLowerCase().includes(search.toLowerCase()) ||
+    s.periodName.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === "group") return a.group.localeCompare(b.group) || a.name.localeCompare(b.name);
+    if (sortBy === "name") return a.name.localeCompare(b.name);
+    if (sortBy === "time") return b.periodStart - a.periodStart;
+    return 0;
+  });
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
+        zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: "#241508", border: "1px solid rgba(180,120,40,0.4)",
+          borderRadius: 14, padding: "24px", maxWidth: 600, width: "100%",
+          maxHeight: "85vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: 12
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: 11, letterSpacing: 4, color: "#b47828", textTransform: "uppercase" }}>Database</div>
+            <div style={{ fontSize: 20, fontWeight: "bold", color: "#d4a843" }}>All {SPECIES_DB.length} Species</div>
+          </div>
+          <button onClick={onClose} style={{
+            background: "rgba(100,60,15,0.4)", border: "1px solid rgba(255,255,255,0.1)",
+            color: "#b09878", borderRadius: 8, padding: "6px 12px", cursor: "pointer",
+            fontSize: 13, fontFamily: "inherit"
+          }}>✕ Close</button>
+        </div>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search species or group..."
+            style={{
+              flex: 1, padding: "8px 12px", background: "rgba(100,60,15,0.4)",
+              border: "1px solid rgba(180,120,40,0.3)", borderRadius: 8,
+              color: "#f0e6d0", fontSize: 13, fontFamily: "inherit", outline: "none"
+            }}
+          />
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value)}
+            style={{
+              padding: "8px 10px", background: "rgba(100,60,15,0.4)",
+              border: "1px solid rgba(180,120,40,0.3)", borderRadius: 8,
+              color: "#d4a843", fontSize: 12, fontFamily: "inherit", cursor: "pointer"
+            }}
+          >
+            <option value="group">By Group</option>
+            <option value="name">By Name</option>
+            <option value="time">By Age</option>
+          </select>
+        </div>
+
+        <div style={{ fontSize: 11, color: "#7a6040" }}>
+          {filtered.length} of {SPECIES_DB.length} shown — click a species name to open Wikipedia
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {sorted.map(s => (
+            <div
+              key={s.id}
+              style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                padding: "10px 14px", background: "rgba(90,55,15,0.4)",
+                border: "1px solid rgba(255,255,255,0.07)", borderRadius: 8,
+              }}
+            >
+              <div>
+                <a
+                  href={`https://en.wikipedia.org/wiki/${encodeURIComponent(s.wikiSlug)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontWeight: "bold", fontSize: 14, color: "#d4a843", textDecoration: "underline", textDecorationColor: "rgba(212,168,67,0.35)" }}
+                >
+                  {s.name.replace(/\s*\([^)]*\)/, "")}
+                </a>
+                <div style={{ fontSize: 11, color: "#9a7d5a", marginTop: 2 }}>
+                  {s.group}
+                </div>
+              </div>
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div style={{ fontSize: 12, color: "#d4a843" }}>{s.periodName}</div>
+                <div style={{ fontSize: 11, color: "#7a6040" }}>
+                  {s.periodEnd < 0.01 && s.periodEnd > 0
+                    ? `${s.periodStart} Ma – ${Math.round(s.periodEnd * 1000000)} yrs ago`
+                    : s.periodEnd === 0
+                    ? `${s.periodStart} Ma – present`
+                    : `${s.periodStart} – ${s.periodEnd} Ma`}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function HistoryModal({ onClose, history, buildShareTextFromSaved }) {
   const [copiedNum, setCopiedNum] = useState(null);
 
@@ -12218,65 +12394,7 @@ export default function PaleoGame() {
 
       {/* Species List Modal */}}
       {showSpeciesList && (
-        <div
-          onClick={() => setShowSpeciesList(false)}
-          style={{
-            position: "fixed", inset: 0,
-            background: "rgba(0,0,0,0.75)",
-            zIndex: 200,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            padding: 16
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: "#241508",
-              border: "1px solid rgba(180,120,40,0.4)",
-              borderRadius: 14,
-              padding: "24px",
-              maxWidth: 600,
-              width: "100%",
-              maxHeight: "80vh",
-              overflowY: "auto"
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-              <div>
-                <div style={{ fontSize: 11, letterSpacing: 4, color: "#b47828", textTransform: "uppercase" }}>Database</div>
-                <div style={{ fontSize: 20, fontWeight: "bold", color: "#d4a843" }}>All {SPECIES_DB.length} Species</div>
-              </div>
-              <button
-                onClick={() => setShowSpeciesList(false)}
-                style={{
-                  background: "rgba(100,60,15,0.4)", border: "1px solid rgba(255,255,255,0.1)",
-                  color: "#b09878", borderRadius: 8, padding: "6px 12px",
-                  cursor: "pointer", fontSize: 13, fontFamily: "inherit"
-                }}
-              >✕ Close</button>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {[...SPECIES_DB].sort((a, b) => b.periodStart - a.periodStart).map(s => (
-                <div key={s.id} style={{
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
-                  padding: "10px 14px",
-                  background: "rgba(90,55,15,0.4)",
-                  border: "1px solid rgba(255,255,255,0.07)",
-                  borderRadius: 8
-                }}>
-                  <div>
-                    <div style={{ fontWeight: "bold", fontSize: 15 }}>{s.name}</div>
-                    <div style={{ fontSize: 12, color: "#9a7d5a" }}>{s.lineage.find(n => n.rank === "Clade" || n.rank === "Order")?.value || s.lineage[2]?.value}</div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 12, color: "#d4a843" }}>{s.periodName}</div>
-                    <div style={{ fontSize: 11, color: "#7a6040" }}>{s.periodEnd}–{s.periodStart} Ma</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <SpeciesListModal onClose={() => setShowSpeciesList(false)} />
       )}
     </div>
   );
